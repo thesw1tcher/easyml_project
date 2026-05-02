@@ -9,7 +9,10 @@ import streamlit as st
 from repositories.local_project_repository import LocalProjectRepository
 from state.session_state import init_state
 from ui.project_view import (
+    render_dataset_preview,
     render_empty_state,
+    render_project_actions,
+    render_project_header,
     render_upload_block,
 )
 from ui.sidebar import sidebar_existing_projects, sidebar_new_project
@@ -37,8 +40,17 @@ def main() -> None:
         st.session_state.active_project = project
     except Exception:
         pass
-    
+
+    render_project_header(project)
+    render_project_actions(repo, project, st.session_state.active_df)
     render_upload_block(repo, project)
+
+    df = st.session_state.active_df
+    if isinstance(df, pd.DataFrame):
+        render_dataset_preview(df)
+    else:
+        st.subheader("Preview")
+        st.caption("Upload a CSV file to see the table preview here.")
 
     st.divider()
     with st.expander("Project JSON preview"):
