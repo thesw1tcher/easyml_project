@@ -132,6 +132,109 @@ def render_dataset_preview(df: pd.DataFrame) -> None:
             st.dataframe(missing.to_frame("missing_count"),
                          use_container_width=True)
 
+
+def render_data_processing(repo, project: Project, df: pd.DataFrame) -> None:
+    """
+    Заполнение NaN'ов медианой, средним или заданным значением + 
+    изменение конфигурации модели (регрессия/классификация, выбор колонок для обучения и предиктов)
+    """
+    st.divider()
+    st.header("Data Processing")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("Fill Missing Values")
+        cols_with_nan = df.columns[df.isna().any()].tolist()
+        if not cols_with_nan:
+            st.success("No missing values detected.")
+        else:
+            selected_cols = st.multiselect(
+                "Select columns to fill", cols_with_nan)
+            method = st.selectbox(
+                "Fill method", ["Mean", "Median", "Constant"])
+
+            fill_value = None
+            if method == "Constant":
+                fill_value = st.text_input("Enter constant value", value="0")
+
+            if st.button("Apply Fill NaN", type="primary"):
+                if not selected_cols:
+                    st.warning("Please select at least one column.")
+                else:
+                    new_df = df.copy()
+                    for col in selected_cols:
+                        if method == "Mean":
+                            if pd.api.types.is_numeric_dtype(new_df[col]):
+                                new_df[col] = new_df[col].fillna(
+                                    new_df[col].mean())
+                            else:
+                                st.error(
+                                    f"Cannot apply Mean to non-numeric column: {col}")
+                                return
+                        elif method == "Median":
+                            if pd.api.types.is_numeric_dtype(new_df[col]):
+                                new_df[col] = new_df[col].fillna(
+                                    new_df[col].median())
+                            else:
+                                st.error(
+                                    f"Cannot apply Median to non-numeric column: {col}")
+                                return
+                        elif method == "Constant":
+                            try:
+                                val = float(fill_value) if "." in fill_value else int(
+                                    fill_value)
+                            except ValueError:
+                                if new_df[col].dtype == "str":
+                                    val = fill_value
+                                else:
+                                    raise ValueError("Can't assign non-string column with string values")
+                                
+                            new_df[col] = new_df[col].fillna(val)
+
+                    st.session_state.active_df = new_df
+                    repo.save(project, df=new_df)
+                    st.success("Missing values filled and dataset updated.")
+                    st.rerun()
+
+    with col2:
+        st.subheader("ML Configuration")
+        target_col = st.selectbox(
+            "Select Target Column",
+            options=project.column_names,
+            index=project.column_names.index(
+                project.target_column) if project.target_column in project.column_names else 0
+        )
+
+        task_type = st.selectbox(
+            "Select Task Type",
+            options=["classification", "regression"],
+            index=0 if project.task_type == "classification" else 1 if project.task_type == "regression" else 0
+        )
+
+        available_features = [
+            c for c in project.column_names if c != target_col]
+        default_features = [
+            f for f in project.feature_columns if f in available_features]
+        if not default_features:
+            default_features = available_features
+
+        feature_cols = st.multiselect(
+            "Select Feature Columns",
+            options=available_features,
+            default=default_features
+        )
+
+        if st.button("Save ML Configuration", type="primary"):
+            project.target_column = target_col
+            project.task_type = task_type
+            project.feature_columns = feature_cols
+            project.status = "ready_for_ml"
+            repo.save(project)
+            st.success("ML Configuration saved.")
+            st.rerun()
+
+
 def render_eda(df: pd.DataFrame) -> None:
     """
     Вывод коробок с усами для числовых признаков и столбчатых диаграмм для категориальных + корреляции.
