@@ -25,6 +25,7 @@ def render_empty_state() -> None:
         """
     )
 
+
 def render_project_header(project: Project) -> None:
     """
     Заголовок проекта, отображает общую информацию
@@ -35,6 +36,7 @@ def render_project_header(project: Project) -> None:
     cols[1].metric("Columns", project.n_cols)
     cols[2].metric("Status", project.status)
     cols[3].metric("Updated", project.updated_at[:19].replace("T", " "))
+
 
 def render_project_actions(repo, project: Project, df: Optional[pd.DataFrame]) -> None:
     """
@@ -57,6 +59,7 @@ def render_project_actions(repo, project: Project, df: Optional[pd.DataFrame]) -
             project.status = "empty"
             repo.save(project)
             st.rerun()
+
 
 def render_upload_block(repo, project: Project) -> None:
     """
@@ -101,6 +104,7 @@ def render_upload_block(repo, project: Project) -> None:
     if st.session_state.upload_error:
         st.warning(st.session_state.upload_error)
 
+
 def render_dataset_preview(df: pd.DataFrame) -> None:
     """
     Рендер трёх вкладок:
@@ -127,3 +131,48 @@ def render_dataset_preview(df: pd.DataFrame) -> None:
         else:
             st.dataframe(missing.to_frame("missing_count"),
                          use_container_width=True)
+
+def render_eda(df: pd.DataFrame) -> None:
+    """
+    Вывод коробок с усами для числовых признаков и столбчатых диаграмм для категориальных + корреляции.
+    """
+    st.divider()
+    st.header("Exploratory Data Analysis")
+
+    num_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    cat_cols = df.select_dtypes(exclude=["number"]).columns.tolist()
+
+    tab1, tab2, tab3 = st.tabs(["Numerical (Box Plots)", "Categorical (Bar Charts)", "Correlations (Heatmap)"])
+
+    with tab1:
+        if num_cols:
+            col_to_plot = st.selectbox(
+                "Select column for Box Plot", num_cols, key="box_plot_col")
+            if st.button("Show Box Plot"):
+                st.vega_lite_chart(df, {
+                    'mark': {'type': 'boxplot', 'extent': 'min-max'},
+                    'encoding': {
+                        'y': {'field': col_to_plot, 'type': 'quantitative'}
+                    }
+                }, use_container_width=True)
+        else:
+            st.info("No numerical columns found.")
+
+    with tab2:
+        if cat_cols:
+            col_to_plot = st.selectbox(
+                "Select column for Bar Chart", cat_cols, key="bar_chart_col")
+            if st.button("Show Bar Chart"):
+                counts = df[col_to_plot].value_counts().reset_index()
+                counts.columns = [col_to_plot, "count"]
+                st.bar_chart(counts, x=col_to_plot, y="count")
+        else:
+            st.info("No categorical columns found.")
+
+    with tab3:
+        if num_cols and len(num_cols) > 1:
+            fig, ax = plt.subplots(figsize=(10, 8))
+            sns.heatmap(df[num_cols].corr(), annot=True, cmap='coolwarm', fmt=".2f", ax=ax)
+            st.pyplot(fig)
+        else:
+            st.info("Need at least two numerical columns for correlation heatmap.")

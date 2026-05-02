@@ -14,6 +14,7 @@ from ui.project_view import (
     render_project_actions,
     render_project_header,
     render_upload_block,
+    render_eda,
 )
 from ui.sidebar import sidebar_existing_projects, sidebar_new_project
 
@@ -48,6 +49,7 @@ def main() -> None:
     df = st.session_state.active_df
     if isinstance(df, pd.DataFrame):
         render_dataset_preview(df)
+        render_eda(df)
     else:
         st.subheader("Preview")
         st.caption("Upload a CSV file to see the table preview here.")
