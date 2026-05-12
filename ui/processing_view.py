@@ -36,35 +36,40 @@ def render_data_processing(repo: ProjectRepository, project: Project, df: pd.Dat
             else:
                 new_df = df.copy()
                 for col in selected_cols:
-                    if method == "Mean":
-                        if pd.api.types.is_numeric_dtype(new_df[col]):
-                            new_df[col] = new_df[col].fillna(
-                                new_df[col].mean())
-                        else:
-                            st.error(
-                                f"Cannot apply Mean to non-numeric column: {col}")
-                            return
-                    elif method == "Median":
-                        if pd.api.types.is_numeric_dtype(new_df[col]):
-                            new_df[col] = new_df[col].fillna(
-                                new_df[col].median())
-                        else:
-                            st.error(
-                                f"Cannot apply Median to non-numeric column: {col}")
-                            return
-                    elif method == "Constant":
-                        try:
-                            # Try to convert to float or int if possible
-                            val = float(fill_value) if "." in fill_value else int(fill_value)
-                        except ValueError:
-                            # If conversion fails, check if column is string/object
-                            if new_df[col].dtype == "object":
-                                val = fill_value
+                    try:
+                        if method == "Mean":
+                            if pd.api.types.is_numeric_dtype(new_df[col]):
+                                new_df[col] = new_df[col].fillna(new_df[col].mean())
                             else:
-                                st.error(f"Cannot assign value '{fill_value}' to numeric column {col}")
-                                return
+                                st.error(f"Cannot apply Mean to non-numeric column: {col}")
+                                continue
+                        elif method == "Median":
+                            if pd.api.types.is_numeric_dtype(new_df[col]):
+                                new_df[col] = new_df[col].fillna(new_df[col].median())
+                            else:
+                                st.error(f"Cannot apply Median to non-numeric column: {col}")
+                                continue
+                        elif method == "Constant":
+                            val = fill_value
+                            try:
+                                if "." in fill_value:
+                                    val = float(fill_value)
+                                else:
+                                    val = int(fill_value)
+                            except ValueError:
+                                pass
                             
-                        new_df[col] = new_df[col].fillna(val)
+                            if not pd.api.types.is_object_dtype(new_df[col]):
+                                try:
+                                    pd.Series([val]).astype(new_df[col].dtype)
+                                except (ValueError, TypeError):
+                                    st.error(f"Value '{fill_value}' is incompatible with numeric column '{col}'")
+                                    continue
+                                
+                            new_df[col] = new_df[col].fillna(val)
+                    except Exception as e:
+                        st.error(f"Error processing column '{col}': {e}")
+                        continue
 
                 st.session_state.active_df = new_df
                 repo.save(project, df=new_df)

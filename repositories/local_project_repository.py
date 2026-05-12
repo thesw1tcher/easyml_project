@@ -8,8 +8,10 @@ from typing import Optional
 import pandas as pd
 
 from domain.project import Project, ProjectStatus
+from domain.exceptions import ProjectNotFoundError
 from domain.repository import ProjectRepository
 from utils.config_loader import config
+import streamlit as st
 
 
 
@@ -70,7 +72,11 @@ class LocalProjectRepository:
         """
         Инициализирует проект из projects/project.project_id/project.json
         """
-        with self.meta_path(project_id).open("r", encoding="utf-8") as f:
+        path = self.meta_path(project_id)
+        if not path.exists():
+            raise ProjectNotFoundError(f"Project metadata not found at {path}")
+
+        with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         return Project.from_dict(data)
 
@@ -86,6 +92,7 @@ class LocalProjectRepository:
             try:
                 with meta_file.open("r", encoding="utf-8") as f:
                     projects.append(Project.from_dict(json.load(f)))
-            except Exception:
+            except Exception as e:
+                st.warning(f"Failed to load project from {meta_file.parent.name}: {e}")
                 continue
         return sorted(projects, key=lambda p: p.updated_at, reverse=True)
