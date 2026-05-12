@@ -5,7 +5,8 @@ from typing import Optional
 import pandas as pd
 import streamlit as st
 
-from domain.project import Project
+from domain.project import Project, ProjectStatus
+from domain.repository import ProjectRepository
 from utils.helpers import load_dataset
 from utils.config_loader import config
 
@@ -34,7 +35,7 @@ def render_project_header(project: Project) -> None:
     cols[3].metric("Updated", project.updated_at[:19].replace("T", " "))
 
 
-def render_project_actions(repo, project: Project, df: Optional[pd.DataFrame]) -> None:
+def render_project_actions(repo: ProjectRepository, project: Project, df: Optional[pd.DataFrame]) -> None:
     """
     Сохранение/сброс проекта.
     """
@@ -52,12 +53,12 @@ def render_project_actions(repo, project: Project, df: Optional[pd.DataFrame]) -
             project.n_rows = 0
             project.n_cols = 0
             project.column_names = []
-            project.status = "empty"
+            project.status = ProjectStatus.EMPTY
             repo.save(project)
             st.rerun()
 
 
-def render_upload_block(repo, project: Project) -> None:
+def render_upload_block(repo: ProjectRepository, project: Project) -> None:
     """
     Загрузка файла + выбор разделителя
     """
@@ -89,7 +90,7 @@ def render_upload_block(repo, project: Project) -> None:
             project.n_rows = int(df.shape[0])
             project.n_cols = int(df.shape[1])
             project.column_names = df.columns.astype(str).tolist()
-            project.status = "dataset_loaded"
+            project.status = ProjectStatus.DATASET_LOADED
             repo.save(project, df=df)
             st.success(
                 f"Loaded {uploaded.name}: {df.shape[0]} rows × {df.shape[1]} columns")

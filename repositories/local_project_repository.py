@@ -7,7 +7,8 @@ from typing import Optional
 
 import pandas as pd
 
-from domain.project import Project
+from domain.project import Project, ProjectStatus
+from domain.repository import ProjectRepository
 from utils.config_loader import config
 
 
@@ -60,7 +61,7 @@ class LocalProjectRepository:
             project.n_rows = int(df.shape[0])
             project.n_cols = int(df.shape[1])
             project.column_names = df.columns.astype(str).tolist()
-            project.status = "dataset_loaded"
+            project.status = ProjectStatus.DATASET_LOADED
 
         with self.meta_path(project.project_id).open("w", encoding="utf-8") as f:
             json.dump(project.to_dict(), f, ensure_ascii=False, indent=2)

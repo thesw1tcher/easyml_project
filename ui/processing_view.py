@@ -2,8 +2,13 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 from utils.config_loader import config
+from typing import TYPE_CHECKING
 
-def render_data_processing(repo, project, df: pd.DataFrame) -> None:
+if TYPE_CHECKING:
+    from domain.project import Project
+    from domain.repository import ProjectRepository
+
+def render_data_processing(repo: ProjectRepository, project: Project, df: pd.DataFrame) -> None:
     """
     Заполнение NaN'ов медианой, средним или заданным значением.
     """
