@@ -13,6 +13,7 @@ from ui.project_view import (
     render_project_header,
     render_upload_block
 )
+from domain.exceptions import ProjectNotFoundError
 from ui.eda_view import render_eda
 from ui.processing_view import render_data_processing
 from ui.ml_config_view import render_ml_config
@@ -37,8 +38,16 @@ def main() -> None:
     try:
         project = repo.load(project.project_id)
         st.session_state.active_project = project
-    except Exception:
-        pass
+    except (ProjectNotFoundError, json.JSONDecodeError) as e:
+        st.error(f"Failed to load active project: {e}")
+        st.session_state.active_project = None
+        st.session_state.active_project_id = None
+        st.rerun()
+    except Exception as e:
+        st.error(f"An unexpected error occurred while loading project: {e}")
+        st.session_state.active_project = None
+        st.session_state.active_project_id = None
+        st.rerun()
 
     render_project_header(project)
     render_project_actions(repo, project, st.session_state.active_df)
