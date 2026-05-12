@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import streamlit as st
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from domain.project import Project
 
 
 def init_state() -> None:
@@ -20,7 +24,7 @@ def init_state() -> None:
             st.session_state[key] = value
 
 
-def set_active_project(project) -> None:
+def set_active_project(project: Project) -> None:
     st.session_state.active_project_id = project.project_id
     st.session_state.active_project = project
 
