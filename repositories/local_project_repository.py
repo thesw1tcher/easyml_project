@@ -8,9 +8,11 @@ from typing import Optional
 import pandas as pd
 
 from domain.project import Project
+from utils.config_loader import config
 
 
-PROJECTS_ROOT = Path("projects")
+
+PROJECTS_ROOT = Path(config["app"]["projects_root"])
 PROJECTS_ROOT.mkdir(parents=True, exist_ok=True)
 
 
