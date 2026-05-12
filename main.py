@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Optional
-
 import pandas as pd
 import streamlit as st
 
@@ -13,18 +11,17 @@ from ui.project_view import (
     render_empty_state,
     render_project_actions,
     render_project_header,
-    render_upload_block,
-    render_eda,
-    render_data_processing
+    render_upload_block
 )
+from ui.eda_view import render_eda
+from ui.processing_view import render_data_processing
+from ui.ml_config_view import render_ml_config
 from ui.sidebar import sidebar_existing_projects, sidebar_new_project
-
-
-APP_TITLE = "EasyML"
+from utils.config_loader import config
 
 
 def main() -> None:
-    st.set_page_config(page_title=APP_TITLE, layout="wide")
+    st.set_page_config(page_title=config["app"]["title"], layout="wide")
     init_state()
     repo = LocalProjectRepository()
 
@@ -51,7 +48,14 @@ def main() -> None:
     if isinstance(df, pd.DataFrame):
         render_dataset_preview(df)
         render_eda(df)
-        render_data_processing(repo, project, df)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            render_data_processing(repo, project, df)
+        with col2:
+            st.divider()
+            st.header("ML Configuration")
+            render_ml_config(repo, project)
     else:
         st.subheader("Preview")
         st.caption("Upload a CSV file to see the table preview here.")
