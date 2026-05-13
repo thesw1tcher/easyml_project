@@ -9,8 +9,8 @@ import streamlit as st
 @st.cache_data(show_spinner=True)
 def load_dataset(file_bytes: bytes, filename: str, **kwargs) -> pd.DataFrame:
     """
-    Loads a dataset from bytes based on the file extension.
-    Supports CSV and Excel files.
+    Загрузка датасета из байтов на основе расширения файла.
+    Поддерживает CSV и Excel файлы.
     """
     buffer = BytesIO(file_bytes)
     ext = filename.split(".")[-1].lower()
