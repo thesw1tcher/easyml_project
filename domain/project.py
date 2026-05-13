@@ -50,7 +50,6 @@ class Project:
             raise ValueError("n_rows cannot be negative")
         if self.n_cols < 0:
             raise ValueError("n_cols cannot be negative")
-        
         if self.target_column and self.target_column in self.feature_columns:
             raise ValueError("target_column cannot be in feature_columns")
 
@@ -72,13 +71,10 @@ class Project:
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
-        # StrEnum converts to str automatically in asdict/json.dump usually, 
-        # but let's be explicit if needed. Actually asdict works fine with StrEnum.
         return data
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> "Project":
-        # Handle backward compatibility for strings
         status_val = data.get("status", "empty")
         if isinstance(status_val, str):
             try:

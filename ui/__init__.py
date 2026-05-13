@@ -10,6 +10,7 @@ from .eda_view import render_eda
 from .processing_view import render_data_processing
 from .ml_config_view import render_ml_config
 from .ml_view import render_model_training
+from .inference_view import render_inference
 
 __all__ = [
     "render_empty_state",
@@ -23,4 +24,5 @@ __all__ = [
     "render_data_processing",
     "render_ml_config",
     "render_model_training",
+    "render_inference",
 ]

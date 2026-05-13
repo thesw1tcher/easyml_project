@@ -1,13 +1,13 @@
 class EasyMLError(Exception):
-    """Base exception for EasyML."""
+    """Базовое исключение для EasyML."""
     pass
 
 
 class ProjectNotFoundError(EasyMLError):
-    """Raised when a project is not found in the repository."""
+    """Исключение возникает, когда проект не найден в репозитории."""
     pass
 
 
 class DatasetLoadError(EasyMLError):
-    """Raised when there is an error loading a dataset."""
+    """Исключение возникает при загрузке датасета."""
     pass

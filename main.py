@@ -50,26 +50,37 @@ def main() -> None:
         st.session_state.active_project_id = None
         st.rerun()
 
-    render_project_header(project)
-    render_project_actions(repo, project, st.session_state.active_df)
-    render_upload_block(repo, project)
+    tab_prep, tab_train, tab_inf = st.tabs([
+        "📊 Data preparation", 
+        "🧠 Model training", 
+        "🚀 Model inference"
+    ])
 
-    df = st.session_state.active_df
-    if isinstance(df, pd.DataFrame):
-        render_dataset_preview(df)
-        render_eda(df)
+    with tab_prep:
+        render_project_header(project)
+        render_project_actions(repo, project, st.session_state.active_df)
+        render_upload_block(repo, project)
         
-        col1, col2 = st.columns(2)
-        with col1:
+        df = st.session_state.active_df
+        if isinstance(df, pd.DataFrame):
+            render_dataset_preview(df)
+            render_eda(df)
             render_data_processing(repo, project, df)
-        with col2:
-            st.divider()
-            st.header("ML Configuration")
+        else:
+            st.info("Please upload a dataset to start preparation.")
+
+    with tab_train:
+        st.caption(f"Project: {project.name}")
+        df = st.session_state.active_df
+        if isinstance(df, pd.DataFrame):
             render_ml_config(repo, project)
             render_model_training(repo, project, df)
-    else:
-        st.subheader("Preview")
-        st.caption("Upload a CSV file to see the table preview here.")
+        else:
+            st.warning("Training requires a dataset. Please upload and prepare data in the 'Data Preparation' tab.")
+
+    with tab_inf:
+        from ui.inference_view import render_inference
+        render_inference(repo, project)
 
     st.divider()
     with st.expander("Project JSON preview"):
