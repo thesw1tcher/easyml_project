@@ -26,3 +26,7 @@ class ProjectRepository(Protocol):
     def list_projects(self) -> list[Project]:
         """Получить список всех проектов."""
         ...
+
+    def model_path(self, project_id: str) -> str:
+        """Получить путь к сохранённой модели."""
+        ...

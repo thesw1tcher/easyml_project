@@ -47,6 +47,12 @@ class LocalProjectRepository:
         safe_name = Path(original_filename).name
         return self.project_dir(project_id) / safe_name
 
+    def model_path(self, project_id: str) -> str:
+        """
+        Путь до сохранённой модели проекта.
+        """
+        return str(self.project_dir(project_id) / "model.joblib")
+
     def save(self, project: Project, df: Optional[pd.DataFrame] = None) -> None:
         """
         Кладёт в projects/project.project_id json-файл с данными проекта.
