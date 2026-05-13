@@ -8,37 +8,60 @@ from typing import Any, Tuple, Optional
 from domain.project import TaskType
 
 
+from sklearn.model_selection import GridSearchCV
+
 def train_model(
     df: pd.DataFrame, 
     target: str, 
     features: list[str], 
-    task_type: TaskType
+    task_type: TaskType,
+    iterations: int = 100,
+    tune_hyperparams: bool = False
 ) -> Any:
     """
-    Обучение модели на основании типа задачи
+    Обучение модели на основании типа задачи с опциональным поиском гиперпараметров.
     """
     X = df[features]
     y = df[target]
 
+    # Автоматическое определение категориальных признаков
+    cat_features = X.select_dtypes(include=['object', 'category']).columns.tolist()
+
     if task_type == TaskType.CLASSIFICATION:
-        model = CatBoostClassifier(
-            iterations=100,
-            depth=6,
-            learning_rate=0.1,
+        base_model = CatBoostClassifier(
+            iterations=iterations,
             verbose=False,
-            allow_writing_files=False
+            allow_writing_files=False,
+            cat_features=cat_features # Указываем признаки здесь
         )
     else:
-        model = CatBoostRegressor(
-            iterations=100,
-            depth=6,
-            learning_rate=0.1,
+        base_model = CatBoostRegressor(
+            iterations=iterations,
             verbose=False,
-            allow_writing_files=False
+            allow_writing_files=False,
+            cat_features=cat_features # И здесь
         )
 
-    model.fit(X, y)
-    return model
+    if tune_hyperparams:
+        param_grid = {
+            'iterations': [iterations, iterations * 2],
+            'depth': [4, 6, 8],
+            'learning_rate': [0.01, 0.05, 0.1],
+        }
+        grid_search = GridSearchCV(
+            estimator=base_model,
+            param_grid=param_grid,
+            cv=3,
+            scoring='accuracy' if task_type == TaskType.CLASSIFICATION else 'neg_mean_squared_error',
+            n_jobs=-1
+        )
+        # При использовании GridSearchCV для CatBoost с cat_features, 
+        # лучше передавать их в параметры инициализации модели, что мы и сделали выше.
+        grid_search.fit(X, y)
+        return grid_search.best_estimator_
+    else:
+        base_model.fit(X, y, cat_features=cat_features)
+        return base_model
 
 
 def save_model(model: Any, path: str) -> None:
