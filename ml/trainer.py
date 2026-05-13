@@ -15,7 +15,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, mean_squared_error, r2_score
 import numpy as np
 
 def train_model(
@@ -27,10 +27,10 @@ def train_model(
     iterations: int = 100,
     test_size: float = 0.2,
     tune_hyperparams: bool = False
-) -> Tuple[Any, dict]:
+) -> Tuple[Any, dict, Tuple[np.ndarray, np.ndarray]]:
     """
     Обучение выбранной модели с препроцессингом и оценкой.
-    Возвращает (model, metrics).
+    Возвращает (model, metrics, (y_test, y_pred)).
     """
     X = df[features]
     y = df[target]
@@ -70,7 +70,7 @@ def train_model(
         ])
         cat_transformer = Pipeline(steps=[
             ('imputer', SimpleImputer(strategy='most_frequent')),
-            ('onehot', OneHotEncoder(handle_unknown='ignore'))
+            ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
         ])
         preprocessor = ColumnTransformer(transformers=[
             ('num', num_transformer, num_features),
@@ -92,37 +92,55 @@ def train_model(
         else:
             model.fit(X_train, y_train)
 
+    y_pred = model.predict(X_test)
+    metrics = evaluate_model(y_test, y_pred, task_type)
+    return model, metrics, (y_test, y_pred)
 
-    metrics = evaluate_model(model, X_test, y_test, task_type)
-    return model, metrics
-
-def evaluate_model(model: Any, X_test: pd.DataFrame, y_test: pd.Series, task_type: TaskType) -> dict:
-    preds = model.predict(X_test)
+def evaluate_model(y_test: pd.Series, y_pred: np.ndarray, task_type: TaskType) -> dict:
     if task_type == TaskType.CLASSIFICATION:
         return {
-            "Accuracy": accuracy_score(y_test, preds),
-            "F1-Score": f1_score(y_test, preds, average='weighted')
+            "Accuracy": accuracy_score(y_test, y_pred),
+            "Precision": precision_score(y_test, y_pred, average='weighted', zero_division=0),
+            "Recall": recall_score(y_test, y_pred, average='weighted', zero_division=0),
+            "F1-Score": f1_score(y_test, y_pred, average='weighted', zero_division=0)
         }
     else:
         return {
-            "RMSE": np.sqrt(mean_squared_error(y_test, preds)),
-            "R2-Score": r2_score(y_test, preds)
+            "RMSE": np.sqrt(mean_squared_error(y_test, y_pred)),
+            "R2-Score": r2_score(y_test, y_pred)
         }
 
 def get_feature_importance(model: Any, features: list[str]) -> pd.DataFrame:
-    """Извлекает важность признаков (пока для CatBoost и RF)"""
-    if hasattr(model, "get_feature_importance"): # CatBoost
-        importances = model.get_feature_importance()
-    elif hasattr(model, "steps") and hasattr(model.steps[-1][1], "feature_importances_"): # RF Pipeline
-        importances = model.steps[-1][1].feature_importances_
-        if len(importances) != len(features):
-            return pd.DataFrame() 
-    elif hasattr(model, "feature_importances_"): # RF base
-        importances = model.feature_importances_
-    else:
+    """Извлекает важность признаков с поддержкой имен из Pipeline"""
+    try:
+        if hasattr(model, "get_feature_importance"): # CatBoost
+            importances = model.get_feature_importance()
+            feature_names = features
+        elif hasattr(model, "steps"): # Scikit-learn Pipeline
+            preprocessor = model.named_steps['preprocessor']
+            try:
+                feature_names = preprocessor.get_feature_names_out()
+            except:
+                feature_names = features
+            
+            base_model = model.steps[-1][1]
+            if hasattr(base_model, "feature_importances_"):
+                importances = base_model.feature_importances_
+            elif hasattr(base_model, "coef_"):
+                importances = np.abs(base_model.coef_)
+                if len(importances.shape) > 1:
+                    importances = np.mean(importances, axis=0)
+            else:
+                return pd.DataFrame()
+        else:
+            return pd.DataFrame()
+        
+        if len(importances) != len(feature_names):
+            return pd.DataFrame()
+            
+        return pd.DataFrame({"Feature": feature_names, "Importance": importances}).sort_values(by="Importance", ascending=False)
+    except:
         return pd.DataFrame()
-    
-    return pd.DataFrame({"Feature": features, "Importance": importances}).sort_values(by="Importance", ascending=False)
 
 
 def save_model(model: Any, path: str) -> None:
