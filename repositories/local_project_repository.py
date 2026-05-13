@@ -7,10 +7,15 @@ from typing import Optional
 
 import pandas as pd
 
-from domain.project import Project
+from domain.project import Project, ProjectStatus
+from domain.exceptions import ProjectNotFoundError
+from domain.repository import ProjectRepository
+from utils.config_loader import config
+import streamlit as st
 
 
-PROJECTS_ROOT = Path("projects")
+
+PROJECTS_ROOT = Path(config["app"]["projects_root"])
 PROJECTS_ROOT.mkdir(parents=True, exist_ok=True)
 
 
@@ -42,6 +47,12 @@ class LocalProjectRepository:
         safe_name = Path(original_filename).name
         return self.project_dir(project_id) / safe_name
 
+    def model_path(self, project_id: str) -> str:
+        """
+        Путь до сохранённой модели проекта.
+        """
+        return str(self.project_dir(project_id) / "model.joblib")
+
     def save(self, project: Project, df: Optional[pd.DataFrame] = None) -> None:
         """
         Кладёт в projects/project.project_id json-файл с данными проекта.
@@ -58,7 +69,7 @@ class LocalProjectRepository:
             project.n_rows = int(df.shape[0])
             project.n_cols = int(df.shape[1])
             project.column_names = df.columns.astype(str).tolist()
-            project.status = "dataset_loaded"
+            project.status = ProjectStatus.DATASET_LOADED
 
         with self.meta_path(project.project_id).open("w", encoding="utf-8") as f:
             json.dump(project.to_dict(), f, ensure_ascii=False, indent=2)
@@ -67,7 +78,11 @@ class LocalProjectRepository:
         """
         Инициализирует проект из projects/project.project_id/project.json
         """
-        with self.meta_path(project_id).open("r", encoding="utf-8") as f:
+        path = self.meta_path(project_id)
+        if not path.exists():
+            raise ProjectNotFoundError(f"Project metadata not found at {path}")
+
+        with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         return Project.from_dict(data)
 
@@ -79,10 +94,18 @@ class LocalProjectRepository:
         Список проектов, расположенных в папке projects/
         """
         projects: list[Project] = []
+        corrupted = []
         for meta_file in sorted(self.root.glob("*/project.json")):
             try:
                 with meta_file.open("r", encoding="utf-8") as f:
                     projects.append(Project.from_dict(json.load(f)))
             except Exception:
-                continue
+                corrupted.append(meta_file.parent.name)
+        
+        if corrupted:
+            st.sidebar.warning(f"⚠️ {len(corrupted)} projects failed to load (corrupted metadata).")
+            with st.sidebar.expander("Details"):
+                for name in corrupted:
+                    st.write(f"- {name}")
+                    
         return sorted(projects, key=lambda p: p.updated_at, reverse=True)
