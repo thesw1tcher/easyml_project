@@ -24,7 +24,6 @@ def train_model(
     X = df[features]
     y = df[target]
 
-    # Автоматическое определение категориальных признаков
     cat_features = X.select_dtypes(include=['object', 'category']).columns.tolist()
 
     if task_type == TaskType.CLASSIFICATION:
@@ -32,14 +31,14 @@ def train_model(
             iterations=iterations,
             verbose=False,
             allow_writing_files=False,
-            cat_features=cat_features # Указываем признаки здесь
+            cat_features=cat_features
         )
     else:
         base_model = CatBoostRegressor(
             iterations=iterations,
             verbose=False,
             allow_writing_files=False,
-            cat_features=cat_features # И здесь
+            cat_features=cat_features
         )
 
     if tune_hyperparams:
@@ -55,8 +54,6 @@ def train_model(
             scoring='accuracy' if task_type == TaskType.CLASSIFICATION else 'neg_mean_squared_error',
             n_jobs=-1
         )
-        # При использовании GridSearchCV для CatBoost с cat_features, 
-        # лучше передавать их в параметры инициализации модели, что мы и сделали выше.
         grid_search.fit(X, y)
         return grid_search.best_estimator_
     else:
