@@ -17,6 +17,7 @@ from domain.exceptions import ProjectNotFoundError
 from ui.eda_view import render_eda
 from ui.processing_view import render_data_processing
 from ui.ml_config_view import render_ml_config
+from ui.ml_view import render_model_training
 from ui.sidebar import sidebar_existing_projects, sidebar_new_project
 from utils.config_loader import config
 
@@ -65,6 +66,7 @@ def main() -> None:
             st.divider()
             st.header("ML Configuration")
             render_ml_config(repo, project)
+            render_model_training(repo, project, df)
     else:
         st.subheader("Preview")
         st.caption("Upload a CSV file to see the table preview here.")
