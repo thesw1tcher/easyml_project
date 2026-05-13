@@ -6,10 +6,11 @@ import pandas as pd
 import streamlit as st
 
 from domain.project import Project
+from domain.repository import ProjectRepository
 from state.session_state import clear_active_data, set_active_project
 
 
-def sidebar_new_project(repo) -> None:
+def sidebar_new_project(repo: ProjectRepository) -> None:
     st.sidebar.header("Project")
     with st.sidebar.form("create_project_form", clear_on_submit=True):
         name = st.text_input(
@@ -27,7 +28,7 @@ def sidebar_new_project(repo) -> None:
             st.rerun()
 
 
-def sidebar_existing_projects(repo) -> None:
+def sidebar_existing_projects(repo: ProjectRepository) -> None:
     projects = repo.list_projects()
     st.sidebar.subheader("Open existing")
 

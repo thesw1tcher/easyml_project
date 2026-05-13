@@ -1,0 +1,19 @@
+app:
+  title: "EasyML"
+  projects_root: "projects"
+  preview_limit: 200
+
+data_processing:
+  fill_methods:
+    - "Mean"
+    - "Median"
+    - "Constant"
+  supported_formats:
+    - "csv"
+    - "xlsx"
+    - "xls"
+
+ml:
+  task_types:
+    - "classification"
+    - "regression"
