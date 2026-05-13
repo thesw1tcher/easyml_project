@@ -94,11 +94,18 @@ class LocalProjectRepository:
         Список проектов, расположенных в папке projects/
         """
         projects: list[Project] = []
+        corrupted = []
         for meta_file in sorted(self.root.glob("*/project.json")):
             try:
                 with meta_file.open("r", encoding="utf-8") as f:
                     projects.append(Project.from_dict(json.load(f)))
-            except Exception as e:
-                st.warning(f"Failed to load project from {meta_file.parent.name}: {e}")
-                continue
+            except Exception:
+                corrupted.append(meta_file.parent.name)
+        
+        if corrupted:
+            st.sidebar.warning(f"⚠️ {len(corrupted)} projects failed to load (corrupted metadata).")
+            with st.sidebar.expander("Details"):
+                for name in corrupted:
+                    st.write(f"- {name}")
+                    
         return sorted(projects, key=lambda p: p.updated_at, reverse=True)
